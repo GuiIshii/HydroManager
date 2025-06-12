@@ -1,0 +1,145 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <PubSubClient.h>
+
+// Configurações Wi-Fi
+const char* ssid = "BDAG";
+const char* password = "bdag2018";
+
+
+
+// ====== Configurações ThingSpeak 
+const char* thingSpeakAPIKey = "FPFYWQK9VNIEF7SD";
+const char* thingSpeakURL = "http://api.thingspeak.com/update";
+
+// ====== Configurações MQTT 
+const char* mqttServer = "test.mosquitto.org";
+const int mqttPort = 1883;
+const char* mqttTopic = "equibigas2420q";       //bomba
+const char* mqttStatusTopic = "pump/status";    // Tópico para o status
+const char* mqttClientId = "WaterLevelController";
+
+// ====== Pinos ======
+const int sensorNivel = 34;    // Pino analógico do sensor
+const int relePin = 12;        // Pino do relé
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configuração dos pinos
+  pinMode(sensorNivel, INPUT);
+  pinMode(relePin, OUTPUT);
+  digitalWrite(relePin, LOW);  
+
+  conectarWiFi();
+
+  // Configuração do MQTT
+  mqttClient.setServer(mqttServer, mqttPort);
+  mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(256);  
+}
+
+void loop() {
+  verificarConexoes();
+
+  // Leitura e envio para ThingSpeak a cada 5 segundos
+  static unsigned long lastSend = 0;
+  if (millis() - lastSend >= 5000) {
+    lastSend = millis();
+    int leitura = analogRead(sensorNivel);
+    enviarParaThingSpeak(leitura);
+    Serial.println("Leitura do sensor: " + String(leitura));
+  }
+
+  mqttClient.loop();
+  delay(10);
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  Serial.print("Mensagem recebida [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  Serial.println(message);
+
+  if (String(topic) == mqttTopic) {
+    if (message == "0" || message == "ligar") {
+      digitalWrite(relePin, HIGH);
+      mqttClient.publish(mqttStatusTopic, "ON");
+      Serial.println("Relé LIGADO via MQTT");
+    } else if (message == "1" || message == "desligar") {
+      digitalWrite(relePin, LOW);
+      mqttClient.publish(mqttStatusTopic, "OFF");
+      Serial.println("Relé DESLIGADO via MQTT");
+    }
+  }
+}
+
+void verificarConexoes() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi desconectado! Reconectando...");
+    conectarWiFi();
+  }
+
+  if (!mqttClient.connected()) {
+    Serial.println("MQTT desconectado! Reconectando...");
+    reconnectMQTT();
+  }
+}
+
+void reconnectMQTT() {
+  while (!mqttClient.connected()) {
+    Serial.print("Conectando ao MQTT...");
+    if (mqttClient.connect(mqttClientId)) {
+      Serial.println("Conectado!");
+      mqttClient.subscribe(mqttTopic);
+      Serial.println("Inscrito no tópico: " + String(mqttTopic));
+    } else {
+      Serial.print("Falha, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" Tentando novamente em 5s...");
+      delay(5000);
+    }
+  }
+}
+
+void conectarWiFi() {
+  Serial.print("Conectando ao WiFi ");
+  Serial.println(ssid);
+  
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  
+  Serial.println("\nWiFi conectado!");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void enviarParaThingSpeak(int nivel) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  http.begin(thingSpeakURL);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  String postData = "api_key=" + String(thingSpeakAPIKey) + "&field1=" + String(nivel);
+  int httpCode = http.POST(postData);
+
+  if (httpCode > 0) {
+    Serial.println("Dados enviados para ThingSpeak. Nível: " + String(nivel));
+  } else {
+    Serial.println("Erro ao enviar para ThingSpeak: " + String(httpCode));
+  }
+
+  http.end();
+}
