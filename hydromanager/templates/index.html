@@ -1,0 +1,632 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydroManager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+    <style>
+        /* Estilos globais */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Container principal */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* Cabeçalho */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 10px;
+        }
+
+        /* Logo */
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-img {
+            height: 40px;
+            width: auto;
+        }
+
+        .logo-text {
+            color: #737B8B;
+            font-size: 18px;
+            font-weight: 600;
+            margin-left: -5px;
+        }
+
+        /* Perfil do usuário */
+        .user-profile {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-pic {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #05b79c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-name {
+            color: #555;
+            font-size: 14px;
+        }
+
+        .dropdown-icon {
+            color: #999;
+            transition: transform 0.3s;
+        }
+
+        .user-profile:hover .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 40px;
+            right: 0;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            min-width: 150px;
+            padding: 8px 0;
+            display: none;
+            z-index: 100;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 8px 16px;
+            color: #333;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Layout principal de conteúdo */
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* Layout principal com melhor distribuição horizontal */
+        .main-layout {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .chart-section {
+            flex: 3;
+        }
+
+        .control-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Cartão principal */
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Gráfico estilo ThingSpeak */
+        .chart-container {
+            width: 100%;
+            height: 300px; /* Altura fixa mais adequada */
+            position: relative;
+            min-height: 240px;
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 8px;
+        }
+        
+        /* Canvas para o gráfico */
+        #waterChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Detalhes do modelo ThingSpeak */
+        .ts-chart-header {
+            color: #4a6785;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        
+        .ts-chart-footer {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+        
+        .axis-label {
+            position: absolute;
+            font-size: 12px;
+            color: #555;
+        }
+        
+        .y-label {
+            transform: rotate(-90deg);
+            left: -30px;
+            top: 50%;
+        }
+        
+        .x-label {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Controle de bomba redesenhado */
+        .control-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        /* Botão de controle moderno */
+        .pump-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .pump-button {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pump-button:focus {
+            outline: none;
+        }
+
+        .pump-button .icon {
+            font-size: 24px;
+            color: #737B8B;
+            transition: all 0.3s ease;
+        }
+
+        .pump-button.active {
+            background-color: #05b79c;
+        }
+
+        .pump-button.active .icon {
+            color: white;
+        }
+
+        .pump-button::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            opacity: 0;
+            transform: scale(0);
+            transition: transform 0.5s, opacity 0.3s;
+        }
+
+        .pump-button:active::after {
+            transform: scale(1.2);
+            opacity: 0;
+            transition: 0s;
+        }
+
+        .pump-status {
+            font-size: 14px;
+            font-weight: 500;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .status-on {
+            background-color: #e3fff1;
+            color: #00a876;
+        }
+
+        .status-off {
+            background-color: #fff1f1;
+            color: #e74c3c;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: none;
+            margin: 10px auto;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(0, 191, 165, 0.3);
+            border-radius: 50%;
+            border-top-color: #05b79c;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        /* Mensagem de erro */
+        .error-message {
+            display: none;
+            text-align: center;
+            color: #e74c3c;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Rodapé */
+        .footer {
+            text-align: center;
+            padding: 8px 0;
+            color: #999;
+            font-size: 12px;
+            margin-top: auto;
+        }
+
+        /* Tooltip estilo ThingSpeak */
+        .ts-tooltip {
+            position: absolute;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            pointer-events: none;
+            font-size: 12px;
+            z-index: 10;
+            display: none;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            
+            .chart-section, .control-section {
+                flex: auto;
+            }
+            
+            .chart-container {
+                min-height: 200px;
+            }
+            
+            .pump-button {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cabeçalho com logo e perfil -->
+        <header class="header">
+            <!-- Logo personalizado -->
+            <div class="logo-container">
+                <img src="/static/images/logo-hydromanager.png" alt="HydroManager Logo" class="logo-img">
+                <span class="logo-text">HydroManager</span>
+            </div>
+            
+            <!-- Perfil do usuário -->
+            <div class="user-profile" id="userProfile">
+                <div class="profile-info">
+                    <div class="profile-pic">J</div>
+                    <span class="user-name">João</span>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" id="settingsLink">Configurações</a>
+                    <a href="#" id="logoutLink">Sair</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Container principal de conteúdo -->
+        <div class="content-container">
+            <!-- Layout principal com melhor distribuição horizontal -->
+            <div class="main-layout">
+                <!-- Seção do gráfico -->
+                <div class="chart-section">
+                    <div class="card">
+                        <div class="ts-chart-header">Volume de água</div>
+                        <div class="chart-container">
+                            <canvas id="waterChart"></canvas>
+                            <div id="chartLoading" class="loading"></div>
+                            <div id="tsTooltip" class="ts-tooltip"></div>
+                        </div>
+                        <div id="chartError" class="error-message">Erro ao carregar dados do gráfico</div>
+                        <div class="ts-chart-footer">
+                            <span>Dados do ThingSpeak</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção do controle redesenhada -->
+                <div class="control-section">
+                    <div class="card">
+                        <div class="control-center">
+                            <div class="pump-control">
+                                <button id="pumpToggle" class="pump-button">
+                                    <i class="fas fa-tint icon"></i>
+                                </button>
+                                <div id="pumpStatus" class="pump-status status-off">Desativada</div>
+                                <div id="pumpLoading" class="loading"></div>
+                                <div id="pumpError" class="error-message">Erro ao controlar a bomba</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <footer class="footer">
+            © 2025 - HydroManager
+        </footer>
+    </div>
+
+    <!-- Scripts necessários -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    <script>
+    // Inicialização do gráfico
+    let waterChart;
+    function initChart() {
+        const ctx = document.getElementById('waterChart').getContext('2d');
+        waterChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Nível de Água',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    data: []
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                aspectRatio: 2, 
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return moment(tooltipItems[0].parsed.x).format('DD/MM/YYYY HH:mm');
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:mm'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Horário'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nível (unidades)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Carregar dados do sensor
+    async function loadChartData() {
+        document.getElementById('chartLoading').style.display = 'block';
+        document.getElementById('chartError').style.display = 'none';
+        
+        try {
+            const response = await fetch('http://localhost:5000/api/water-data');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.values.length === 0) {
+                document.getElementById('chartError').textContent = 'Não há dados disponíveis';
+                document.getElementById('chartError').style.display = 'block';
+                document.getElementById('chartLoading').style.display = 'none';
+                return;
+            }
+            
+            const formattedData = data.timestamps.map((ts, i) => ({
+                x: new Date(ts),
+                y: data.values[i]
+            }));
+            
+            waterChart.data.datasets[0].data = formattedData;
+            waterChart.update();
+            document.getElementById('chartLoading').style.display = 'none';
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            document.getElementById('chartError').textContent = 'Erro ao carregar dados do gráfico';
+            document.getElementById('chartError').style.display = 'block';
+            document.getElementById('chartLoading').style.display = 'none';
+        }
+    }
+
+    // Controle da bomba
+    async function togglePump() {
+        const pumpButton = document.getElementById('pumpToggle');
+        const currentState = pumpButton.classList.contains('active');
+        const newState = currentState ? 'OFF' : 'ON';
+        
+        document.getElementById('pumpLoading').style.display = 'block';
+        document.getElementById('pumpError').style.display = 'none';
+        
+        try {
+            const response = await fetch(`http://localhost:5000/api/pump/control/${newState}`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                updatePumpUI(newState === 'ON');
+            } else {
+                throw new Error('Falha ao controlar a bomba');
+            }
+        } catch (error) {
+            console.error('Erro ao controlar bomba:', error);
+            document.getElementById('pumpError').style.display = 'block';
+        } finally {
+            document.getElementById('pumpLoading').style.display = 'none';
+        }
+    }
+
+    function updatePumpUI(isOn) {
+        const pumpButton = document.getElementById('pumpToggle');
+        const statusElement = document.getElementById('pumpStatus');
+        
+        if (isOn) {
+            pumpButton.classList.add('active');
+            statusElement.textContent = 'Ativada';
+            statusElement.className = 'pump-status status-on';
+        } else {
+            pumpButton.classList.remove('active');
+            statusElement.textContent = 'Desativada';
+            statusElement.className = 'pump-status status-off';
+        }
+    }
+
+    // Script para o dropdown do menu do usuário
+    document.getElementById('userProfile').addEventListener('click', function(event) {
+        event.stopPropagation();
+        document.getElementById('dropdownMenu').classList.toggle('active');
+    });
+
+    // Fechar o dropdown quando clicar fora dele
+    document.addEventListener('click', function() {
+        document.getElementById('dropdownMenu').classList.remove('active');
+    });
+
+    // Prevenir o comportamento padrão dos links no dropdown
+    document.getElementById('settingsLink').addEventListener('click', function(event) {
+        event.preventDefault();
+        alert('Funcionalidade em desenvolvimento');
+    });
+
+    document.getElementById('logoutLink').addEventListener('click', function(event) {
+        event.preventDefault();
+        alert('Funcionalidade em desenvolvimento');
+    });
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+        initChart();
+        loadChartData();
+        
+        // Atualizar dados a cada 1 minuto
+        setInterval(loadChartData, 60000);
+        
+        // Verificar estado inicial da bomba
+        fetch('http://localhost:5000/api/pump/status')
+            .then(response => response.json())
+            .then(data => updatePumpUI(data.status === 'ON'))
+            .catch(error => {
+                console.error('Erro ao obter status da bomba:', error);
+                document.getElementById('pumpError').style.display = 'block';
+            });
+        
+        // Configurar botão
+        document.getElementById('pumpToggle').addEventListener('click', togglePump);
+    });
+    </script>
+</body>
+</html>
